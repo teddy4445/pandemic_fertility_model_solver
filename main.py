@@ -69,13 +69,12 @@ def run():
                     params[beta_key] = 0.001
     
     # Initialize and run simulations
+    # TODO: Ariel, make sure the values corresponding to the paper
     simulator_runner = SimulatorRunner(population_size=1000,
                                        initial_infected=0.01,
                                        days=100,
                                        params=params)
-    simulator_runner.run_multiple_simulations(n=5,
-                                              save_path='simulation_results',
-                                              verbose=LoadingBar())
+    simulator_runner.paper_run(verbose=LoadingBar())
 
 
 if __name__ == '__main__':
