@@ -1,9 +1,9 @@
 # library imports
 import numpy as np
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+colors = ["#006400", "#00008b", "#b03060", "#ff0000", "#ffff00", "#deb887", "#00ff00", "#00ffff", "#ff00ff", "#6495ed"]
 
 class Plotter:
     
@@ -11,81 +11,69 @@ class Plotter:
         pass
         
     @staticmethod
-    def plot_results(history, save_path):
-        days = range(len(history))
+    def fig2(histories, save_paths):
+        h_index = 0
+        for history in histories:
+            days = range(len(history))
 
-        states = ['S', 'E', 'I^a', 'I^s', 'R']
-        for state_index in range(len(states)):
-            plt.plot(days, history[:, state_index], label=f"${states[state_index]}$")
+            index = 0
+            for city_name, signals in history.items():
+                signals_array = np.array(signals)
+                average_signal = np.mean(signals_array, axis=0)
+                std_signal = np.std(signals_array, axis=0)
 
-        plt.xlabel('Days', fontsize=16)
-        plt.ylabel('Portion of the population', fontsize=16)
+                plt.plot(days, average_signal, color=colors[index], label=f"{city_name}")
+                plt.fill_between(days, average_signal - std_signal, average_signal + std_signal, color=colors[index], alpha=0.25)
+                index += 1
+
+            plt.xlabel('Time in days [t]', fontsize=16)
+            plt.ylabel('Average fertility decline (B) [1]', fontsize=16)
+            plt.xticks([30 * i for i in range(13)])
+            plt.yticks([0.05 + -0.05 * i for i in range(12)])
+            plt.legend()
+            plt.gca().spines[['right', 'top']].set_visible(False)
+            plt.grid(alpha=0.25, color="black")
+            plt.tight_layout()
+            plt.savefig(save_paths[h_index], dpi=400)
+            plt.close()
+            h_index += 1
+
+    @staticmethod
+    def fig3(means, stds, x_label, y_label, save_path):
+
+        plt.plot(range(len(means)), means, "-", color="black")
+        plt.fill_between(range(len(means)), means - stds, means + stds, color="black",
+                         alpha=0.5)
+
+        plt.xlabel(x_label, fontsize=16)
+        plt.ylabel(y_label, fontsize=16)
+        plt.xticks([30 * i for i in range(13)])
+        plt.yticks([0.05 + -0.05 * i for i in range(12)])
         plt.legend()
+        plt.gca().spines[['right', 'top']].set_visible(False)
+        plt.grid(alpha=0.25, color="black")
         plt.tight_layout()
         plt.savefig(save_path, dpi=400)
         plt.close()
 
     @staticmethod
-    def plot_multi_result(average_history, std_dev_history, save_path):
-        days = range(len(average_history))
-        states = ['S', 'E', 'I^a', 'I^s', 'R']
-        for state_index in range(len(states)):
-            plt.plot(days, average_history[:, state_index], label=f"${states[state_index]}$")
-            plt.fill_between(days, 
-                             np.array(average_history[:, state_index]) - np.array(std_dev_history[:, state_index]),
-                             np.array(average_history[:, state_index]) + np.array(std_dev_history[:, state_index]),
-                             alpha=0.2)
-
-        plt.xlabel('Days', fontsize=16)
-        plt.ylabel('Portion of the population', fontsize=16)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=400)
-        plt.close()
-
-    @staticmethod
-    def plot_fertility_rate_dynamics(time_data, tfr_data, cities, scenarios, save_path):
-        fig, axs = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
-        scenario_titles = ['No Pandemic', 'With Pandemic', 'Pandemic Without Immunity Decay']
-
-        for i, scenario in enumerate(scenarios):
-            for city in cities:
-                axs[i].plot(time_data, tfr_data[scenario][city], label=city)
-            axs[i].set_title(scenario_titles[i])
-            axs[i].set_xlabel('Time (days)', fontsize=16)
-
-        axs[0].set_ylabel('Total Fertility Rate (TFR)', fontsize=16)
-        axs[0].legend()
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=400)
-        plt.close()
-
-    @staticmethod
-    def plot_infection_vs_fertility_heatmap(infection_rates, fertility_reduction, average_tfr_reduction, save_path):
+    def fig4(values, x_ticks, y_ticks, x_label, y_label, save_path):
         plt.figure(figsize=(10, 8))
-        sns.heatmap(average_tfr_reduction, xticklabels=infection_rates, yticklabels=fertility_reduction, cmap="YlGnBu")
-        plt.xlabel('Infection Rate ($\\beta$)', fontsize=16)
-        plt.ylabel('Fertility Reduction ($\\xi$)', fontsize=16)
+        sns.heatmap(values, xticklabels=x_ticks, yticklabels=y_ticks, cmap="YlGnBu")
+        plt.xlabel(x_label, fontsize=16)
+        plt.ylabel(y_label, fontsize=16)
         plt.tight_layout()
         plt.savefig(save_path, dpi=400)
         plt.close()
 
     @staticmethod
-    def create_sensitivity_analysis_table(sensitivity_data, save_path):
-        df = pd.DataFrame(sensitivity_data, columns=['Parameter Name', 'Value Range', 'Impact on TFR', 'Impact on Population Size'])
-        df.to_csv(save_path, index=False)
-        print(df.to_markdown(index=False))
-
-    @staticmethod
-    def plot_3d_scatter(kinds_want_rate, fertility_reduce_ability, tfr, save_path):
-        fig = plt.figure(figsize=(10, 8))
+    def fig5(x_vals, y_vals, z_vals, save_path):
+        fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(111, projection='3d')
-
-        ax.scatter(kinds_want_rate, fertility_reduce_ability, tfr, c='blue', marker='o', alpha=0.25)
-        ax.set_xlabel('Kinds Want Rate ($\\omega$)', fontsize=16)
-        ax.set_ylabel('Fertility Reduce Ability ($\\xi$)', fontsize=16)
-        ax.set_zlabel('Total Fertility Rate (TFR)', fontsize=16)
-
+        ax.scatter(x_vals, y_vals, z_vals, color='black', alpha=0.5)
+        ax.set_xlabel(x_label, fontsize=16)
+        ax.set_ylabel(y_label, fontsize=16)
+        ax.set_zlabel(z_label, fontsize=16)
         plt.tight_layout()
         plt.savefig(save_path, dpi=400)
         plt.close()

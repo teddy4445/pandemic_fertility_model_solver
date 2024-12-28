@@ -1,24 +1,18 @@
 # library imports
-import time
-import random
-
-import numpy as np
 
 # project imports
-from agent import Agent
 from plotter import Plotter
 from simulator import Simulation
-from population import Population
-from loading_bar import LoadingBar
+from simulator_generator import SimulationGenerator
 
+# CONSTS #
+cities = ['Delhi, India', 'Shanghai, China', 'Paris, France', 'Istanbul, Turkey', 'London, UK', 'Toronto, Canada', 'Tel Aviv, Israel', 'New York, USA', 'Sao Paulo, Brazil', 'Berlin, Germany']
+# END - CONSTS #
 
 class SimulatorRunner:
     
-    def __init__(self, population_size, initial_infected, days, params):
-        self.population_size = population_size
-        self.initial_infected = initial_infected
-        self.days = days
-        self.params = params
+    def __init__(self):
+        pass
 
     def __repr__(self):
         return "<SimulatorRunner>"
@@ -26,125 +20,92 @@ class SimulatorRunner:
     def __str__(self):
         return "<SimulatorRunner>"
 
-    def paper_run(self,
-                  verbose: LoadingBar):
+    def paper_run(self):
         """
         A single function to run all the logic needed to produce all the results for the paper
         :return:
         """
-        self._generate_fertility_rate_dynamics_data(verbose=verbose,
-                                                    save_path="fertility_rate_dynamics.pdf")
-        self._generate_infection_vs_fertility_data(verbose=verbose,
-                                                   save_path="infection_vs_fertility.pdf")
-        self._generate_sensitivity_analysis_data(verbose=verbose,
-                                                 save_path="sensitivity_analysis.pdf")
-        self._generate_3d_scatter_data(verbose=verbose,
-                                       save_path="3d_scatter.pdf")
+        self.run_fig2()
+        self.run_fig3()
+        self.run_table3()
+        self.run_fig4()
+        self.run_fig5()
 
-    def _generate_fertility_rate_dynamics_data(self, verbose, save_path):
-        # TODO: Ariel, make sure the values make sense and run the relevent simulaiton
-        # Example code to generate or retrieve data
-        time_data = range(0, 365)  # Simulate 365 days
-        cities = ['CityA', 'CityB', 'CityC']
-        scenarios = ['no_pandemic', 'with_pandemic', 'pandemic_no_immunity_decay']
+    def run_fig2(self):
+        history_cases = []
+        for case in ["a", "b", "c"]:
+            histories = {}
+            for name in cities:
+                vals = []
+                for i in range(100):
+                    case_sim = SimulationGenerator.generate(model_parameter_average=False,
+                                                            city_initial_condition=name,
+                                                            is_control_case=False)
+                    if case == "a":
+                        case_sim.params["beta"] = 0
+                        case_sim.params["xi"] = 0
+                    if case == "b":
+                        case_sim.params["xi"] = 0
+                    case = case_sim.run().history
 
-        # Simulated TFR data for each scenario and city
-        tfr_data = {
-            'no_pandemic': {
-                'CityA': [2.5 + i * 0.01 for i in time_data],
-                'CityB': [2.4 + i * 0.01 for i in time_data],
-                'CityC': [2.6 + i * 0.01 for i in time_data],
-            },
-            'with_pandemic': {
-                'CityA': [2.5 - i * 0.02 for i in time_data],
-                'CityB': [2.4 - i * 0.02 for i in time_data],
-                'CityC': [2.6 - i * 0.02 for i in time_data],
-            },
-            'pandemic_no_immunity_decay': {
-                'CityA': [2.5 - i * 0.015 for i in time_data],
-                'CityB': [2.4 - i * 0.015 for i in time_data],
-                'CityC': [2.6 - i * 0.015 for i in time_data],
-            },
-        }
+                    control_sim = SimulationGenerator.generate(model_parameter_average=False,
+                                                            city_initial_condition=name,
+                                                            is_control_case=False)
+                    control_sim.params = case_sim.params
+                    control_sim.params["beta"] = 0
+                    control = control_sim.run().history
+                    b_over_time = [(case[i] - control[i])/control[i] if control[i] != 0 else 0 for i in range(len(case))]
+                    vals.append(b_over_time)
+                histories[name] = vals
+            history_cases.append(histories)
 
-        # Plot the fertility rate dynamics
-        Plotter.plot_fertility_rate_dynamics(time_data, tfr_data, cities, scenarios, save_path)
+        Plotter.fig2(histories=histories,
+                     save_paths=["fig2_a.pdf", "fig2_b.pdf", "fig2_c.pdf"])
+
+    def run_fig3(self):
+
+        parameters_min_max = {"beta": (3.36e-2, 1.73e-1, "Average fertility decline (B)"),
+                              "xi": (0.04, 0.06, "Pandemic-caused fertility decline ($\\xi$)"),
+                              "delta": (1.1e-2 * 0.5, 1.1e-2 * 1.5, "Pandemic-caused fertility decline ($\\delta$)")}
+
+        for parameter, min_max in parameters_min_max.items():
+
+            means = []
+            stds = []
+            parameter_values = [min_max[0] + (min_max[1] - min_max[0]) * i / 10 for i in range(11)]
+            for index, beta in enumerate(parameter_values):
+                vals = []
+                for name in cities:
+                    for i in range(100):
+                        case_sim = SimulationGenerator.generate(model_parameter_average=False,
+                                                                city_initial_condition=name,
+                                                                is_control_case=False)
+                        case_sim.params[parameter] = beta
+                        case = case_sim.run().history
+
+                        control_sim = SimulationGenerator.generate(model_parameter_average=False,
+                                                                   city_initial_condition=name,
+                                                                   is_control_case=False)
+                        control_sim.params = case_sim.params
+                        control_sim.params["beta"] = 0
+                        control = control_sim.run().history
+                        b_over_time = [(case[i] - control[i]) / control[i] if control[i] != 0 else 0 for i in range(len(case))]
+                        vals.append(sum(b_over_time)/len(b_over_time))
+                means.append(np.mean(vals))
+                stds.append(np.std(vals))
+
+            Plotter.fig3(means=means,
+                         stds=stds,
+                         x_label="Average infection rate ($\\beta$)",
+                         y_label=min_max[2],
+                         save_path=f"fig3_{parameter}.pdf")
 
 
-    def _generate_infection_vs_fertility_data(self, verbose, save_path):
-        # TODO: Ariel, make sure the values make sense and run the relevent simulaiton
-        # Example code to generate or retrieve data
-        infection_rates = [0.1 * i for i in range(1, 11)]  # Infection rate from 0.1 to 1.0
-        fertility_reduction = [0.1 * i for i in range(1, 11)]  # Fertility reduction from 0.1 to 1.0
-        average_tfr_reduction = np.random.rand(10, 10)  # Randomly generated for illustration
+    def run_table3(self):
+        pass
 
-        # Plot the heatmap
-        Plotter.plot_infection_vs_fertility_heatmap(infection_rates, fertility_reduction, average_tfr_reduction, save_path)
+    def run_fig4(self):
+        pass
 
-    def _generate_sensitivity_analysis_data(self, verbose, save_path):
-        # TODO: Ariel, make sure the values make sense and run the relevent simulaiton
-        # Example code to generate or retrieve data
-        sensitivity_data = [
-            {'Parameter Name': '\\beta', 'Value Range': '0.5 - 1.5', 'Impact on TFR': 'High',
-             'Impact on Population Size': 'Moderate'},
-            {'Parameter Name': '\\xi', 'Value Range': '0.5 - 1.5', 'Impact on TFR': 'Moderate',
-             'Impact on Population Size': 'Low'},
-            # More rows...
-        ]
-
-        # Create the sensitivity analysis table
-        Plotter.create_sensitivity_analysis_table(sensitivity_data, save_path)
-
-    def _generate_3d_scatter_data(self, verbose, save_path):
-        # TODO: Ariel, make sure the values make sense and run the relevent simulaiton
-        # Example code to generate or retrieve data
-        kinds_want_rate = [0.1 * i for i in range(1, 21)]  # Simulated range for ω
-        fertility_reduce_ability = [0.1 * i for i in range(1, 21)]  # Simulated range for ξ
-        tfr = [1.5 + 0.1 * i for i in range(1, 21)]  # Simulated TFR values
-
-        # Plot the 3D scatter plot
-        Plotter.plot_3d_scatter(kinds_want_rate, fertility_reduce_ability, tfr, save_path)
-
-    def run_simulation(self,
-                       verbose: LoadingBar,
-                       save_path: str = ""):
-        population = Population()
-        agents = [Agent(age_group='c', gender=random.choice(['m', 'f']), epi_state='S') for _ in
-                  range(self.population_size)]
-        for agent in random.sample(agents, int(self.population_size * self.initial_infected)):
-            agent.state = 'Ia'
-        population.agents = agents
-        simulation = Simulation(population,
-                                self.days,
-                                self.params)
-        simulation.run(verbose=verbose)
-        if save_path != "":
-            Plotter.plot_results(simulation.history, save_path)
-
-        return simulation
-
-    def run_multiple_simulations(self,
-                                 n: int,
-                                 save_path: str,
-                                 verbose: LoadingBar):
-        all_histories = []
-        verbose.register(name="Global", total=n)
-        for sim_index in range(n):
-            if verbose:
-                verbose.update(name="Global", iteration=sim_index)
-                verbose.refresh()
-            all_histories.append(self.run_simulation(verbose=verbose).history)
-        verbose.update(name="Global", iteration=n)
-
-        # Convert all_histories to numpy array for easier manipulation
-        all_histories = np.array(all_histories)
-
-        # Calculate average and std deviation across simulations
-        average_history = np.mean(all_histories, axis=0)
-        std_dev_history = np.std(all_histories, axis=0)
-
-        # save results in plot
-        if save_path != "":
-            Plotter.plot_multi_result(average_history, std_dev_history, save_path)
-
-        return all_histories
+    def run_fig5(self):
+        pass
