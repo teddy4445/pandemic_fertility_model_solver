@@ -48,7 +48,8 @@ class SimulationGenerator:
             "alpha_ed": 7.94e-5,  # Single value
             "omega": (0.05661 + 0.06919) / 2,  # Average of range
             "xi": (0.04 + 0.06) / 2,  # Average of range
-            "tau": (0.485 + 0.515) / 2  # Single value
+            "tau": (0.485 + 0.515) / 2,  # Single value
+            "zeta": 0.95
         }
         return parameters
 
@@ -70,7 +71,8 @@ def get_parameters_sampled():
         "alpha_ed": 7.94e-5,  # Single value
         "omega": random.uniform(0.05661, 0.06919),  # Uniform sampling
         "xi": random.uniform(0.04, 0.06),  # Uniform sampling
-        "tau": random.uniform(0.485, 0.515)  # Uniform sampling
+        "tau": random.uniform(0.485, 0.515),  # Uniform sampling
+        "zeta": 0.95
     }
     return parameters
 

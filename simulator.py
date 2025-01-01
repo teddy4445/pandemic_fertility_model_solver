@@ -190,10 +190,10 @@ class Simulation:
             m_sick += self.population[f"{epi_state}_a_m_y"]
             f_sick += self.population[f"{epi_state}a_f_y"]
 
-        return self.params["omega"] * (self.params["xi"] * m_healthy * f_sick +
-                                       self.params["xi"]**2 * m_sick * f_sick +
+        return self.params["omega"] * (self.params["zeta"] * m_healthy * f_sick +
+                                       self.params["zeta"]**2 * m_sick * f_sick +
                                        m_healthy * f_healthy +
-                                       self.params["xi"] * m_sick * f_healthy)
+                                       self.params["zeta"] * m_sick * f_healthy)
 
 def infection_count(self):
     infection_rate = 0
