@@ -1,8 +1,10 @@
 # library imports
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from tqdm import tqdm
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 
 # project imports
 from plotter import Plotter
