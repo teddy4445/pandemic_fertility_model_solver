@@ -7,7 +7,9 @@ As part of our research, we are interested in investigating the relationship bet
 1. Python 3.13
 2. numpy
 3. matplotlib
-3. seaborn
+4. seaborn
+5. tqdm
+6. statsmodels
 
 ### Installation and usage
 1. Clone the repository - git clone https://github.com/teddy4445/pandemic_fertility_abs followed by "cd pandemic_fertility_abs"

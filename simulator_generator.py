@@ -34,7 +34,7 @@ class SimulationGenerator:
         parameters = {
             "T": 3650,  # Single value
             "beta": (3.36e-2 + 1.73e-1) / 2,  # Average of range
-            "phi": (4 + 7) / 2,  # Average of range
+            "phi": 1/((4 + 7) / 2),  # Average of range
             "d_c": 5.9e-6,  # Non-disease death rate for c
             "d_a": 1.51e-6,  # Non-disease death rate for as
             "d_e": 1.7e-4,  # Non-disease death rate for e

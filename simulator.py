@@ -44,18 +44,136 @@ class Simulation:
         [self.run_step() for _ in range(self.params["T"])]
         return self
 
-    def run_step(self):
+    def run_step(self, h = 1):
         # calc general stuff we need
         born = self.calc_born()
         infects = self.infection_count()
 
         key = "s_c_m_n"
-        self.population[key] = self.params["tau"] * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key]
+        self.population[key] = self.population[key] + h * (self.params["tau"] * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
 
         key = "s_c_f_n"
-        self.population[key] = (1 - self.params["tau"]) * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key]
+        self.population[key] = self.population[key] + h * ((1 - self.params["tau"]) * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
 
-        # TODO: finish the other equations - note Eq. (1) in the paper shows half of the equations as we have both males and females
+        key = "e_c_m_n"
+        self.population[key] = self.population[key] + h * (self.population["s_c_m_n"] * infects - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "e_c_f_n"
+        self.population[key] = self.population[key] + h * (self.population["s_c_f_n"] * infects - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "ia_c_m_n"
+        self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_c_m_n"] - (self.params["gamma_a"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "ia_c_f_n"
+        self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_c_f_n"] - (self.params["gamma_a"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "is_c_m_n"
+        self.population[key] = self.population[key] + h * ((1 - self.params["rho"]) * self.params["phi"] * self.population["e_c_f_n"] - (self.params["gamma_s"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "is_c_f_n"
+        self.population[key] = self.population[key] + h * ((1 - self.params["rho"]) * self.params["phi"] * self.population["e_c_f_n"] - (self.params["gamma_s"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "r_c_m_n"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_c_m_n"] + self.params["gamma_s"] * self.population["is_c_m_n"] - (self.params["delta"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "r_c_f_n"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_c_f_n"] + self.params["gamma_s"] * self.population["is_c_f_n"] - (self.params["delta"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "r_c_m_n"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_c_m_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_c_m_n"] - (self.params["delta"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "r_c_f_n"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_c_f_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_c_f_n"] - (self.params["delta"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+
+        key = "s_a_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_m_n"] - self.population[key] * infects + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_m_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "s_a_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_f_n"] - self.population[key] * infects + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_f_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "e_a_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_m_n"] + self.population["s_a_m_n"] * infects- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "e_a_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_f_n"] + self.population["s_a_f_n"] * infects- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "ia_a_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["ia_c_m_n"] + self.params["rho"] * self.params["phi"] * self.population["e_a_m_n"] - (self.params["d_a"] + self.params["gamma_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "ia_a_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["ia_c_f_n"] + self.params["rho"] * self.params["phi"] * self.population["e_a_f_n"] - (self.params["d_a"] + self.params["gamma_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "is_a_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["is_c_m_n"] + (1-self.params["rho"]) * self.params["phi"] * self.population["e_a_m_n"] - (self.params["d_a"] + self.params["gamma_s"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "is_a_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["is_c_f_n"] + (1-self.params["rho"]) * self.params["phi"] * self.population["e_a_f_n"] - (self.params["d_a"] + self.params["gamma_s"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "r_a_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["r_c_m_n"] + self.params["gamma_a"] * self.population["ia_a_m_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_a_m_n"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "r_a_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["r_c_f_n"] + self.params["gamma_a"] * self.population["ia_a_f_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_a_f_n"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "s_a_m_y"
+        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_m_y"] + self.params["delta"] * self.population["r_a_m_n"] - self.population[key] * infects - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "s_a_f_y"
+        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_f_y"] + self.params["delta"] * self.population["r_a_f_n"] - self.population[key] * infects - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "e_a_m_y"
+        self.population[key] = self.population[key] + h * (self.population["s_a_m_y"] * infects - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "e_a_f_y"
+        self.population[key] = self.population[key] + h * (self.population["s_a_f_y"] * infects - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "ia_a_m_y"
+        self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_a_m_y"] - (self.params["gamma_a"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "ia_a_f_y"
+        self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_a_f_y"] - (self.params["gamma_a"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "is_a_m_y"
+        self.population[key] = self.population[key] + h * ((1-self.params["rho"]) * self.params["phi"] * self.population["e_a_m_y"] - (self.params["gamma_s"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "is_a_f_y"
+        self.population[key] = self.population[key] + h * ((1-self.params["rho"]) * self.params["phi"] * self.population["e_a_f_y"] - (self.params["gamma_s"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "r_a_m_y"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_a_m_y"] + self.params["gamma_s"] * self.params["lambda"] * self.population["is_a_m_y"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "r_a_f_y"
+        self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_a_f_y"] + self.params["gamma_s"] * self.params["lambda"] * self.population["is_a_f_y"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+
+        key = "s_e_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_m_n"] + self.population["s_a_m_y"]) - self.population[key] * infects + self.params["delta"] * self.population["r_e_m_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "s_e_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_f_n"] + self.population["s_a_f_y"]) - self.population[key] * infects + self.params["delta"] * self.population["r_e_f_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "e_e_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_m_n"] + self.population["e_a_m_y"]) + self.population[key] * infects - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "e_e_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_f_n"] + self.population["e_a_f_y"]) + self.population[key] * infects - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "ia_e_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["ia_a_m_n"] + self.population["ia_a_m_y"]) + self.params["rho"] * self.params["phi"] * self.population["e_e_m_n"] - (self.params["gamma_a"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "ia_e_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["ia_a_f_n"] + self.population["ia_a_f_y"]) + self.params["rho"] * self.params["phi"] * self.population["e_e_f_n"] - (self.params["gamma_a"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "is_e_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["is_a_m_n"] + self.population["is_a_m_y"]) + (1-self.params["rho"]) * self.params["phi"] * self.population["e_e_m_n"] - (self.params["gamma_s"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "is_e_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["is_a_f_n"] + self.population["is_a_f_y"]) + (1-self.params["rho"]) * self.params["phi"] * self.population["e_e_f_n"] - (self.params["gamma_s"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "r_e_m_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["r_a_m_n"] + self.population["r_a_m_y"]) + self.params["gamma_a"] * self.population["ia_e_m_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_e_m_n"] - (self.params["delta"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+
+        key = "r_e_f_n"
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["r_a_f_n"] + self.population["r_a_f_y"]) + self.params["gamma_a"] * self.population["ia_e_f_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_e_f_n"] - (self.params["delta"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
 
         # Log the current state
         self.history.append(born)
