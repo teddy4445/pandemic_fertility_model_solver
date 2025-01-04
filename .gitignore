@@ -5,7 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
-
+*.png
+*.pdf
+*.csv
 .idea/*
 
 # Distribution / packaging

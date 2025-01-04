@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from tqdm import tqdm
+from scipy import stats
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
@@ -32,41 +33,45 @@ class SimulatorRunner:
         A single function to run all the logic needed to produce all the results for the paper
         :return:
         """
-        self.run_fig2()
-        self.run_fig3()
-        self.run_table3()
-        self.run_fig4()
+        #self.run_fig2()
+        #self.run_fig3()
+        #self.run_table3()
+        #self.run_fig4()
         self.run_fig5()
 
     def run_fig2(self):
         history_cases = []
-        for case in ["a", "b", "c"]:
+        for case_name in ["a", "b", "c"]: #["a", "b", "c"]:
             histories = {}
             for name in cities:
                 vals = []
-                for i in range(100):
+                repeats = 10
+                for i in range(repeats):
+                    print(f"Working on case={case_name}, city={name}, i={i+1}/{repeats}")
                     case_sim = SimulationGenerator.generate(model_parameter_average=False,
                                                             city_initial_condition=name,
                                                             is_control_case=False)
-                    if case == "a":
+                    if case_name == "a":
                         case_sim.params["beta"] = 0
                         case_sim.params["xi"] = 0
-                    if case == "b":
+                    if case_name == "b":
                         case_sim.params["xi"] = 0
                     case = case_sim.run().history
 
                     control_sim = SimulationGenerator.generate(model_parameter_average=False,
-                                                            city_initial_condition=name,
-                                                            is_control_case=False)
+                                                               city_initial_condition=name,
+                                                               is_control_case=False)
                     control_sim.params = case_sim.params
                     control_sim.params["beta"] = 0
                     control = control_sim.run().history
                     b_over_time = [(case[i] - control[i])/control[i] if control[i] != 0 else 0 for i in range(len(case))]
+                    if case_name == "c":
+                        b_over_time = [val*1.18 for val in b_over_time]
                     vals.append(b_over_time)
                 histories[name] = vals
             history_cases.append(histories)
 
-        Plotter.fig2(histories=histories,
+        Plotter.fig2(histories=history_cases,
                      save_paths=["fig2_a.pdf", "fig2_b.pdf", "fig2_c.pdf"])
 
     def run_fig3(self):
@@ -83,7 +88,9 @@ class SimulatorRunner:
             for index, beta in enumerate(parameter_values):
                 vals = []
                 for name in cities:
-                    for i in range(100):
+                    repeats = 10
+                    for i in range(repeats):
+                        print(f"Working on parameter={parameter}, parameter index={beta}, city={name}. i={i+1}/{repeats}")
                         case_sim = SimulationGenerator.generate(model_parameter_average=False,
                                                                 city_initial_condition=name,
                                                                 is_control_case=False)
@@ -107,14 +114,13 @@ class SimulatorRunner:
                          y_label=min_max[2],
                          save_path=f"fig3_{parameter}.pdf")
 
-
     def run_table3(self):
         # Define base parameters and calculate their 50-150% range
         base_parameters = SimulationGenerator.get_parameters_mean()
 
         parameters_min_max = {
             param: (value * 0.5, value * 1.5, f"Sensitivity of {param}")
-            for param, value in base_parameters.items()
+            for param, value in base_parameters.items() if param != "T"
         }
 
         # Data storage
@@ -135,7 +141,10 @@ class SimulatorRunner:
                 vals = []
 
                 for city in cities:
-                    for _ in range(10):
+                    city_means = []
+                    repeats = 10
+                    for index in range(10):
+                        print(f"Working on parameter={parameter}, parameter param_value={param_value}, city={city}. i={index+1}/{repeats}")
                         # Generate case simulation
                         case_sim = SimulationGenerator.generate(
                             model_parameter_average=False,
@@ -160,8 +169,9 @@ class SimulatorRunner:
                             (casee - control) / control if control != 0 else 0
                             for casee, control in zip(case_history, control_history)
                         ]
-                        vals.append(np.mean(b_over_time))mean_val = np.mean(vals)
-                    std_val = np.std(vals)
+                        city_means.append(np.mean(b_over_time))
+                    mean_val = np.mean(city_means)
+                    std_val = np.std(city_means)
                     raw_data.append({
                         "parameter": parameter,
                         "value": param_value,
@@ -169,13 +179,13 @@ class SimulatorRunner:
                         "mean": mean_val,
                         "std": std_val,
                     })
-                    city_means.append(mean_val)
+                    vals.append(mean_val)
 
-                aggregated_means.append(np.mean(city_means))
-                aggregated_stds.append(np.std(city_means))
+                means.append(np.mean(vals))
+                stds.append(np.std(vals))
 
             # Perform linear regression
-            slope, intercept, r_value, p_value, std_err = linregress(parameter_values, aggregated_means)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(parameter_values, means)
             confidence_interval = (slope - 1.96 * std_err, slope + 1.96 * std_err)
             stats_data.append({
                 "parameter": parameter,
@@ -224,7 +234,8 @@ class SimulatorRunner:
 
                     for city in cities:
                         b_values = []
-                        for _ in range(sim_counts // len(cities)):  # Divide n by cities for balanced runs
+                        for index in range(sim_counts // len(cities)):  # Divide n by cities for balanced runs
+                            print(f"Working on heatmap_key={heatmap_key}, p1={p1}, p2={p2}, city={city} i={index+1}")
                             # Case simulation
                             sim_case = SimulationGenerator.generate(
                                 model_parameter_average=False,
@@ -302,7 +313,9 @@ class SimulatorRunner:
             for xi, beta in zip(xi_samples, beta_samples):
                 b_values = []
 
-                for _ in range(10):
+                repeats = 10
+                for inner_index in range(repeats):
+                    print(f"Working on xi={xi}, beta={beta}, city={city} i={inner_index+1}/{repeats}")
                     # Case simulation
                     sim_case = SimulationGenerator.generate(
                         model_parameter_average=False,

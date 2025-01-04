@@ -41,25 +41,33 @@ class Simulation:
         return sum(self.history)/len(self.history)
         
     def run(self):
-        [self.run_step() for _ in range(self.params["T"])]
+        self.history = []
+        [self.run_step() for _ in range(int(self.params["T"]))]
         return self
 
-    def run_step(self, h = 1):
+    def run_step(self, h=0.2):
         # calc general stuff we need
         born = self.calc_born()
         infects = self.infection_count()
 
+        s = 0
+        # Loop through each age group and sum the susceptible population
+        for gender in ["m", "f"]:
+            for f_d in ["y", "n"]:
+                for age in ["c", "a", "e"]:
+                    s += self.population.get(f"s_{age}_{gender}_{f_d}", 0)
+
         key = "s_c_m_n"
-        self.population[key] = self.population[key] + h * (self.params["tau"] * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["tau"] * born - self.population[key] * infects / s + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
 
         key = "s_c_f_n"
-        self.population[key] = self.population[key] + h * ((1 - self.params["tau"]) * born - self.population[key] * infects + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
+        self.population[key] = self.population[key] + h * ((1 - self.params["tau"]) * born - self.population[key] * infects / s + self.params["delta"] * self.population["r_c_m_n"] - self.params["d_c"] * self.population[key] - self.params["alpha_ca"] * self.population[key])
 
         key = "e_c_m_n"
-        self.population[key] = self.population[key] + h * (self.population["s_c_m_n"] * infects - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.population["s_c_m_n"] * infects / s - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
 
         key = "e_c_f_n"
-        self.population[key] = self.population[key] + h * (self.population["s_c_f_n"] * infects - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.population["s_c_f_n"] * infects / s - (self.params["phi"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
 
         key = "ia_c_m_n"
         self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_c_m_n"] - (self.params["gamma_a"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
@@ -86,16 +94,16 @@ class Simulation:
         self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_c_f_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_c_f_n"] - (self.params["delta"] + self.params["d_c"] + self.params["alpha_ca"]) * self.population[key])
 
         key = "s_a_m_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_m_n"] - self.population[key] * infects + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_m_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_m_n"] - self.population[key] * infects / s + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_m_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "s_a_f_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_f_n"] - self.population[key] * infects + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_f_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["s_c_f_n"] - self.population[key] * infects / s + (1 - self.params["xi"])*self.params["delta"]*self.population["r_a_f_n"] - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "e_a_m_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_m_n"] + self.population["s_a_m_n"] * infects- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_m_n"] + self.population["s_a_m_n"] * infects / s- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "e_a_f_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_f_n"] + self.population["s_a_f_n"] * infects- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["e_c_f_n"] + self.population["s_a_f_n"] * infects / s- (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "ia_a_m_n"
         self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["ia_c_m_n"] + self.params["rho"] * self.params["phi"] * self.population["e_a_m_n"] - (self.params["d_a"] + self.params["gamma_a"] + self.params["alpha_ae"]) * self.population[key])
@@ -116,16 +124,16 @@ class Simulation:
         self.population[key] = self.population[key] + h * (self.params["alpha_ca"] * self.population["r_c_f_n"] + self.params["gamma_a"] * self.population["ia_a_f_n"] + self.params["lambda"] * self.params["gamma_s"] * self.population["is_a_f_n"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "s_a_m_y"
-        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_m_y"] + self.params["delta"] * self.population["r_a_m_n"] - self.population[key] * infects - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_m_y"] + self.params["delta"] * self.population["r_a_m_n"] - self.population[key] * infects / s - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "s_a_f_y"
-        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_f_y"] + self.params["delta"] * self.population["r_a_f_n"] - self.population[key] * infects - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["xi"] * self.params["delta"] * self.population["r_a_f_y"] + self.params["delta"] * self.population["r_a_f_n"] - self.population[key] * infects / s - (self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "e_a_m_y"
-        self.population[key] = self.population[key] + h * (self.population["s_a_m_y"] * infects - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.population["s_a_m_y"] * infects / s - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "e_a_f_y"
-        self.population[key] = self.population[key] + h * (self.population["s_a_f_y"] * infects - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.population["s_a_f_y"] * infects / s - (self.params["phi"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "ia_a_m_y"
         self.population[key] = self.population[key] + h * (self.params["rho"] * self.params["phi"] * self.population["e_a_m_y"] - (self.params["gamma_a"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
@@ -146,16 +154,16 @@ class Simulation:
         self.population[key] = self.population[key] + h * (self.params["gamma_a"] * self.population["ia_a_f_y"] + self.params["gamma_s"] * self.params["lambda"] * self.population["is_a_f_y"] - (self.params["delta"] + self.params["d_a"] + self.params["alpha_ae"]) * self.population[key])
 
         key = "s_e_m_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_m_n"] + self.population["s_a_m_y"]) - self.population[key] * infects + self.params["delta"] * self.population["r_e_m_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_m_n"] + self.population["s_a_m_y"]) - self.population[key] * infects / s + self.params["delta"] * self.population["r_e_m_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
 
         key = "s_e_f_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_f_n"] + self.population["s_a_f_y"]) - self.population[key] * infects + self.params["delta"] * self.population["r_e_f_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["s_a_f_n"] + self.population["s_a_f_y"]) - self.population[key] * infects / s + self.params["delta"] * self.population["r_e_f_n"] - (self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
 
         key = "e_e_m_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_m_n"] + self.population["e_a_m_y"]) + self.population[key] * infects - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_m_n"] + self.population["e_a_m_y"]) + self.population[key] * infects / s - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
 
         key = "e_e_f_n"
-        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_f_n"] + self.population["e_a_f_y"]) + self.population[key] * infects - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
+        self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["e_a_f_n"] + self.population["e_a_f_y"]) + self.population[key] * infects / s - (self.params["phi"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
 
         key = "ia_e_m_n"
         self.population[key] = self.population[key] + h * (self.params["alpha_ae"] * (self.population["ia_a_m_n"] + self.population["ia_a_m_y"]) + self.params["rho"] * self.params["phi"] * self.population["e_e_m_n"] - (self.params["gamma_a"] + self.params["d_e"] + self.params["alpha_ed"]) * self.population[key])
@@ -188,24 +196,31 @@ class Simulation:
             m_healthy += self.population[f"{epi_state}_a_m_n"]
             f_healthy += self.population[f"{epi_state}_a_f_n"]
             m_sick += self.population[f"{epi_state}_a_m_y"]
-            f_sick += self.population[f"{epi_state}a_f_y"]
+            f_sick += self.population[f"{epi_state}_a_f_y"]
 
-        return self.params["omega"] * (self.params["zeta"] * m_healthy * f_sick +
-                                       self.params["zeta"]**2 * m_sick * f_sick +
-                                       m_healthy * f_healthy +
-                                       self.params["zeta"] * m_sick * f_healthy)
+        p_ss = m_sick / (m_sick + m_healthy) * f_sick / (f_sick + f_healthy)
+        p_sh = m_sick / (m_sick + m_healthy) * f_healthy / (f_sick + f_healthy)
+        p_hs = m_healthy / (m_sick + m_healthy) * f_sick / (f_sick + f_healthy)
+        p_hh = m_healthy / (m_sick + m_healthy) * f_healthy / (f_sick + f_healthy)
 
-def infection_count(self):
-    infection_rate = 0
+        pop_size = min([m_healthy+m_sick, f_sick + f_healthy])
 
-    # Iterate over each gender, age group, and infection category
-    for g in ['m', 'f']:  # Gender: 'm', 'f'
-        for i in ['c', 'a', 'e']:  # Age groups: 'c' (child), 'a' (adult), 'e' (elderly)
-            for f_d in ['y', 'n']:  # Focused infection: 'y' or 'n'
-                # Calculate infection rate from susceptible to infected (both s and a)
-                infection_rate += (
-                        self.params["beta"] * self.population.get(f"is_{i}_{g}_{f_d}", 0) +
-                        self.params["beta"] * self.population.get(f"ia_{i}_{g}_{f_d}", 0)
-                )
+        return self.params["omega"] * (self.params["zeta"] * p_sh * pop_size +
+                                       self.params["zeta"]**2 * p_ss * f_sick +
+                                       p_hh * pop_size +
+                                       self.params["zeta"] * p_hs * pop_size)
 
-    return infection_rate
+    def infection_count(self):
+        infection_rate = 0
+
+        # Iterate over each gender, age group, and infection category
+        for g in ['m', 'f']:  # Gender: 'm', 'f'
+            for i in ['c', 'a', 'e']:  # Age groups: 'c' (child), 'a' (adult), 'e' (elderly)
+                for f_d in ['y', 'n']:  # Focused infection: 'y' or 'n'
+                    # Calculate infection rate from susceptible to infected (both s and a)
+                    infection_rate += (
+                            self.params["beta"] * self.population.get(f"is_{i}_{g}_{f_d}", 0) +
+                            self.params["beta"] * self.population.get(f"ia_{i}_{g}_{f_d}", 0)
+                    )
+
+        return infection_rate
